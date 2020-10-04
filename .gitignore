@@ -1,3 +1,7 @@
+**/build
+**/*.kdev4
+**/.kdev4
+
 # Prerequisites
 *.d
 
@@ -30,3 +34,6 @@
 *.exe
 *.out
 *.app
+
+
+
