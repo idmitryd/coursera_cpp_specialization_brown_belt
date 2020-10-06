@@ -1,7 +1,10 @@
 #include "test_runner.h"
+#include "profile.h"
 
 #include <forward_list>
 #include <iterator>
+#include <algorithm>
+// #include <unordered_set>
 
 using namespace std;
 
@@ -21,14 +24,15 @@ public:
   };
 
   void Add(const Type& value) {
-    size_t index = CalculateIndex(value);
+    size_t val_ind = CalculateIndex(value);
     if (!Has(value)) {
-      data_[index].push_front(value);
+      data_[val_ind].push_front(value);
     }
   }
 
   bool Has(const Type& value) const {
-    return FindValueIterator(value) != data_[CalculateIndex(value)].end();
+    size_t val_ind = CalculateIndex(value);
+    return FindValueIterator(value) != data_[val_ind].end();
   }
 
   void Erase(const Type& value) {
@@ -37,16 +41,14 @@ public:
     if (it == data_[val_ind].end()) {
       return;
     } 
-    else if (it != data_[val_ind].begin()) {
-      data_[val_ind].erase_after(prev(it));
-    } 
     else {
-      data_[val_ind].erase_after(data_[val_ind].before_begin());
+      data_[val_ind].remove(*it);
     }
   }
 
   const BucketList& GetBucket(const Type& value) const {
-    return data_[CalculateIndex(value)];
+    size_t val_ind = CalculateIndex(value);
+    return data_[val_ind];
   }
 
 private:
@@ -54,16 +56,13 @@ private:
   Hasher hasher_;
   vector<BucketList> data_;
 
-  size_t CalculateIndex(const Type& value) const {
+  size_t CalculateIndex (const Type& value) const {
     return hasher_(value) % num_buckets_;
   }
 
   typename BucketList::const_iterator FindValueIterator (Type value) const {
-    auto it = data_[CalculateIndex(value)].begin();
-    for (; it != data_[CalculateIndex(value)].end(); it = next(it)) {
-      if (*it == value) break;
-    }
-    return it;
+    size_t val_ind = CalculateIndex(value);
+    return find(data_[val_ind].begin(), data_[val_ind].end(), value);
   }
 };
 
@@ -154,5 +153,26 @@ int main() {
   RUN_TEST(tr, TestEmpty);
   RUN_TEST(tr, TestIdempotency);
   RUN_TEST(tr, TestEquivalence);
+
+  // HashSet<int, IntHasher> hash_set(100);
+  // unordered_set<int> un_set;
+  // LOG_DURATION("Add HashSet")
+  // {
+  //   for (int i = 0; i < 50000; i++) {
+  //     hash_set.Add(i);
+  //   }
+  //   for (int i = 0; i < 50000; i+=123) {
+  //     hash_set.Add(i);
+  //   }
+  // }
+  // LOG_DURATION("Add un_set")
+  // {
+  //   for (int i = 0; i < 50000; i++) {
+  //     un_set.insert(i);
+  //   }
+  //   for (int i = 0; i < 50000; i+=123) {
+  //     un_set.insert(i);
+  //   }
+  // }
   return 0;
 }
