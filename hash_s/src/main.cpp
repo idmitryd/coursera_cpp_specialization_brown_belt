@@ -4,7 +4,6 @@
 #include <forward_list>
 #include <iterator>
 #include <algorithm>
-// #include <unordered_set>
 
 using namespace std;
 
@@ -17,8 +16,7 @@ public:
   explicit HashSet(
       size_t num_buckets,
       const Hasher& hasher = {}
-  ) : num_buckets_(num_buckets)
-    , hasher_(hasher)
+  ) : hasher_(hasher)
     , data_(num_buckets)
   {
   };
@@ -37,13 +35,7 @@ public:
 
   void Erase(const Type& value) {
     size_t val_ind = CalculateIndex(value);
-    auto it = FindValueIterator(value);
-    if (it == data_[val_ind].end()) {
-      return;
-    } 
-    else {
-      data_[val_ind].remove(*it);
-    }
+    data_[val_ind].remove(value);
   }
 
   const BucketList& GetBucket(const Type& value) const {
@@ -52,12 +44,11 @@ public:
   }
 
 private:
-  size_t num_buckets_;
   Hasher hasher_;
   vector<BucketList> data_;
 
   size_t CalculateIndex (const Type& value) const {
-    return hasher_(value) % num_buckets_;
+    return hasher_(value) % data_.size();
   }
 
   typename BucketList::const_iterator FindValueIterator (Type value) const {
