@@ -13,36 +13,27 @@ struct Record {
   string user;
   int timestamp;
   int karma;
-
-  bool operator==(const Record& rec) const {
-    return id == rec.id &&
-           title == rec.title &&
-           user == rec.user &&
-           timestamp == rec.timestamp &&
-           karma == rec.karma;
-  }
 };
 
 // Реализуйте этот класс
 class Database {
 public:
   using Id = string;
-  using Karma = int;
-  using Timestamp = int;
   using User = string;
+  using Timestamp = int;
+  using Karma = int;
 
   bool Put(const Record& record) {
-    if (!database.count(record.id)) {
-      RecordHolder rh = {record,
-                         karma_storage.insert({record.karma, record.id}),
-                         timestamp_storage.insert({record.timestamp, record.id}),
-                         user_storage.insert({record.user, record.id})};
-      database[record.id] = rh;
-      return true;
-    } 
-    else {
+    auto [it, is_interesting] = database.insert({record.id, Data {record, {}, {}, {}}});
+    if (!is_interesting) {
       return false;
     }
+    Data& data = it->second;
+    const Record *rec_ptr = &data.rec;
+    data.it_karma = karma_storage.insert({rec_ptr->karma, rec_ptr});
+    data.it_timestamp = timestamp_storage.insert({rec_ptr->timestamp, rec_ptr});
+    data.it_user = user_storage.insert({rec_ptr->user, rec_ptr});
+    return true;
   }
   const Record* GetById(const string& id) const {
     if (database.count(id)) {
@@ -56,10 +47,10 @@ public:
   bool Erase(const string& id) {
     auto it = database.find(id);
     if (it != database.end()) {
-      const RecordHolder& rh = it->second;
-      karma_storage.erase(rh.it_karma);
-      timestamp_storage.erase(rh.it_timestamp);
-      user_storage.erase(rh.it_user);
+      const Data& data = it->second;
+      karma_storage.erase(data.it_karma);
+      timestamp_storage.erase(data.it_timestamp);
+      user_storage.erase(data.it_user);
       database.erase(it);
       return true;
     }
@@ -84,29 +75,25 @@ public:
   }
 
 private:
-  struct RecordHolder {
+  struct Data {
     Record rec;
-    multimap<Karma, Id>::iterator it_karma;
-    multimap<Timestamp, Id>::iterator it_timestamp;
-    multimap<User, Id>::iterator it_user;
-
-    bool operator==(const RecordHolder& rh) const {
-      return rec == rh.rec;
-    }
+    multimap<Karma, const Record*>::iterator it_karma;
+    multimap<Timestamp, const Record*>::iterator it_timestamp;
+    multimap<User, const Record*>::iterator it_user;
   };
 
-  unordered_map<Id, RecordHolder> database;
-  multimap<Karma, Id> karma_storage;
-  multimap<Timestamp, Id> timestamp_storage;
-  multimap<User, Id> user_storage;
+  unordered_map<Id, Data> database;
+  multimap<Karma, const Record*> karma_storage;
+  multimap<Timestamp, const Record*> timestamp_storage;
+  multimap<User, const Record*> user_storage;
 
   template <typename Key, typename Callback>
-  void ImplementCallback (const multimap<Key, Id>& mmap, Callback callback, 
+  void ImplementCallback (const multimap<Key, const Record*>& mmap, const Callback& callback, 
                           const Key& k_low, const Key& k_high) const {
     auto it_start = mmap.lower_bound(k_low);
     auto it_end = mmap.upper_bound(k_high);
     for (auto it = it_start; it != it_end; ++it) {
-      if (!callback(database.at(it->second).rec)) return;
+      if (!callback(*it->second)) return;
     }
   }
 };
