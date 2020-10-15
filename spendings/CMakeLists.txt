@@ -6,7 +6,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -Wall")
 
 
 include_directories(./include ~/coursera/brown_belt/include)
-set (SOURCES ./src/main.cpp ./src/xml.cpp)
+set (SOURCES ./src/main.cpp ./src/json.cpp)
 
 
 set(CMAKE_CXX_STANDARD 17)
