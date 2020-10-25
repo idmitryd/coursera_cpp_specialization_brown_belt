@@ -2,18 +2,28 @@
 
 #include <functional>
 #include <string>
+#include <optional>
 using namespace std;
 
 template <typename T>
 class LazyValue {
 public:
-  explicit LazyValue(std::function<T()> init);
+  explicit LazyValue(std::function<T()> init) : init_(init) {}
 
-  bool HasValue() const;
-  const T& Get() const;
+  bool HasValue() const {
+    return value_.has_value();
+  }
+  const T& Get() const {
+    if (!value_) {
+      value_ = optional<T>(init_());
+    }
+    // cout << *value_ << endl;
+    return *value_;
+  }
 
 private:
-
+  std::function<T()> init_;
+  mutable optional<T> value_;
 };
 
 void UseExample() {
@@ -23,6 +33,7 @@ void UseExample() {
 
   ASSERT(!lazy_string.HasValue());
   ASSERT_EQUAL(lazy_string.Get(), big_string);
+  ASSERT(lazy_string.HasValue());
   ASSERT_EQUAL(lazy_string.Get(), big_string);
 }
 
