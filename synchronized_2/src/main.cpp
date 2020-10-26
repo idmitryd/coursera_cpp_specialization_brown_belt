@@ -11,13 +11,24 @@ using namespace std;
 template <typename T>
 class Synchronized {
 public:
-  explicit Synchronized(T initial = T());
+  explicit Synchronized(T initial = T()) : value(move(initial)) {}
 
-  ??? GetAccess();
-  ??? GetAccess() const;
+  template<typename V>
+  struct Access {
+      V& ref_to_value;
+      lock_guard<mutex> g;
+  };
+
+  Access<T> GetAccess() {
+      return {value, lock_guard<mutex>(m)};
+  }
+  Access<const T> GetAccess() const {
+    return {value, lock_guard<mutex>(m)};
+  }
 
 private:
   T value;
+  mutable mutex m;
 };
 
 void TestConcurrentUpdate() {
