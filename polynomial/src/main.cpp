@@ -40,6 +40,34 @@ private:
     }
   }
 
+  class IndexProxy {
+  public:
+    IndexProxy(Polynomial& poly, size_t degree) 
+              : poly_(poly)
+              , degree_(degree)
+              {}
+
+    IndexProxy& operator= (T coeff) {
+      if (coeff != 0 && degree_ > poly_.coeffs_.size() - 1) {
+        poly_.coeffs_.resize(degree_ + 1);
+        poly_.coeffs_[degree_] = coeff;
+      } 
+      else {
+        poly_.coeffs_[degree_] = coeff;
+        poly_.Shrink();
+      }
+      return *this;
+    }
+  // Вызываем константную версию Polynomial::operator[]
+    operator T() const {
+      return std::as_const(poly_)[degree_];
+    }
+
+  private:
+    Polynomial& poly_;
+    size_t degree_;
+  };
+
 public:
   Polynomial() = default;
   Polynomial(vector<T> coeffs) : coeffs_(std::move(coeffs)) {
@@ -90,6 +118,9 @@ public:
   }
 
   // Реализуйте неконстантную версию operator[]
+  IndexProxy operator [](size_t degree) {
+    return IndexProxy(*this, degree);
+  }
 
   T operator ()(const T& x) const {
     T res = 0;
