@@ -2,6 +2,8 @@
 **/*.kdev4
 **/.kdev4
 **/.vscode
+**/.clangd
+**/CMakeFiles
 **/*.zip
 # Prerequisites
 *.d
