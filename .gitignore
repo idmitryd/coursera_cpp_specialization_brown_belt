@@ -1,10 +1,14 @@
 **/build
+**/Makefile
 **/*.kdev4
 **/.kdev4
 **/.vscode
 **/.clangd
 **/CMakeFiles
+**/CMakeCache.txt
+**/*.cmake
 **/*.zip
+**/*.json
 # Prerequisites
 *.d
 
