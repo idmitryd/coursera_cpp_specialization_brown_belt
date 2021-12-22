@@ -4,6 +4,7 @@
 **/.kdev4
 **/.vscode
 **/.clangd
+**/.cache
 **/CMakeFiles
 **/CMakeCache.txt
 **/*.cmake
@@ -41,6 +42,3 @@
 *.exe
 *.out
 *.app
-
-
-
