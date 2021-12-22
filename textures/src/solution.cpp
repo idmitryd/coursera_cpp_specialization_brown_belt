@@ -4,23 +4,25 @@
 
 using namespace std;
 
-// Этот файл сдаётся на проверку
-// Здесь напишите реализацию необходимых классов-потомков `IShape`
+inline bool IsPointInRectangle(Point p, Size size) {
+  return p.x < size.width && p.y < size.height;
+}
+
 class Ellipse : public IShape {
 public:
   Ellipse() = default;
   Ellipse(Point position, Size size, std::shared_ptr<ITexture> texture) :
-    position(position), size(size), texture(texture) {}
+    pos(position), size(size), texture(texture) {}
 
   std::unique_ptr<IShape> Clone() const override {
-    return std::make_unique<Ellipse>(position, size, texture);
+    return std::make_unique<Ellipse>(pos, size, texture);
   }
 
   void SetPosition(Point p) override {
-    position = p;
+    pos = p;
   }
   Point GetPosition() const override {
-    return position;
+    return pos;
   }
 
   void SetSize(Size s) override {
@@ -38,10 +40,24 @@ public:
   }
 
   void Draw(Image& im) const override {
+    int im_height = im.size();
+    int im_width = im[0].size();
+    for (int im_y = pos.y; im_y < pos.y + size.height && im_y < im_height; ++im_y) {
+      for (int im_x = pos.x; im_x < pos.x + size.width && im_x < im_width; ++im_x) {
+        int shape_x = im_x - pos.x;
+        int shape_y = im_y - pos.y;
+        if (IsPointInEllipse({shape_x, shape_y}, size)) {
+          if (texture && IsPointInRectangle({shape_x, shape_y}, texture->GetSize()))
+            im[im_y][im_x] = texture->GetImage()[shape_y][shape_x];
+          else
+            im[im_y][im_x] = '.';
+        }
+      }
+    }
   }
 
 private:
-  Point position;
+  Point pos;
   Size size;
   std::shared_ptr<ITexture> texture;
 };
@@ -80,20 +96,14 @@ public:
   void Draw(Image& im) const override {
     int im_height = im.size();
     int im_width = im[0].size();
-    std::cout << "Start draw" << std::endl;
-    std::cout << "im_height: " << im_height << std::endl;
-    std::cout << "im_width: " <<  im_width << std::endl;
-    if(texture) {
-      std::cout << "text_height: " << texture->GetSize().height << std::endl;
-      std::cout << "text_width: " << texture->GetSize().width << std::endl;
-    }
-    for (int i = pos.x; i < pos.x + size.width && i < im_width; ++i) {
-      for (int j = pos.y; j < pos.y + size.height && j < im_height; ++j) {
-        std::cout << "i: " << i << "\nj: " << j << std::endl;
-        if (isPointInTexture(i-pos.x, j-pos.y))
-          im[j][i] = texture->GetImage()[j-pos.y][i-pos.x];
+    for (int im_y = pos.y; im_y < pos.y + size.height && im_y < im_height; ++im_y) {
+      for (int im_x = pos.x; im_x < pos.x + size.width && im_x < im_width; ++im_x) {
+        int shape_x = im_x - pos.x;
+        int shape_y = im_y - pos.y;
+        if (texture && IsPointInRectangle({shape_x, shape_y}, texture->GetSize()))
+          im[im_y][im_x] = texture->GetImage()[shape_y][shape_x];
         else
-          im[j][i] = '.';
+          im[im_y][im_x] = '.';
       }
     }
   }
@@ -102,19 +112,8 @@ private:
   Point pos;
   Size size;
   std::shared_ptr<ITexture> texture;
-
-  bool isPointInTexture(int x_pos, int y_pos) const {
-    std::cout << "Figure out if (" << x_pos << ", " << y_pos << ") is on the texture" << std::endl;
-    if(texture) {
-      int texture_widht = texture->GetSize().width;
-      int texture_height = texture->GetSize().height;
-      return x_pos < texture_widht && y_pos < texture_height;
-    }
-    return false;
-  }
 };
 
-// Напишите реализацию функции
 unique_ptr<IShape> MakeShape(ShapeType shape_type) {
   switch(shape_type) {
     case ShapeType::Rectangle:

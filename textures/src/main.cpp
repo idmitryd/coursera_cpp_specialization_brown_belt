@@ -194,6 +194,6 @@ int main() {
   RUN_TEST(tr, TestSimple);
   RUN_TEST(tr, TestSmallTexture);
   RUN_TEST(tr, TestCow);
-  // RUN_TEST(tr, TestCpp);
+  RUN_TEST(tr, TestCpp);
   return 0;
 }
