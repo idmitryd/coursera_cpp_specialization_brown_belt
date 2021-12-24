@@ -16,57 +16,48 @@ public:
 
   BookPtr GetBook(const string& book_name) override {
     lock_guard<mutex> lg(m);
+
     if (cache_.count(book_name)) {
-      UpdateBookOrder(book_name);
-      return cache_[book_name];
+      const auto it = cache_[book_name];
+      order_.splice(order_.end(), order_, it);
+      return order_.back();
     }
 
     unique_ptr<IBook> book = books_unpacker_->UnpackBook(book_name);
     size_t book_size = book->GetContent().size();
-    if (book_size <= settings_.max_memory) {
-      ReleaseSpaceForBook(book_size);
-      return AddBook(move(book));
-    }
-    else {
+    if (book_size > settings_.max_memory) {
       order_.clear();
       cache_.clear();
       occupied_memory_ = 0;
       return move(book);
+    }
+    else {
+      ReleaseSpaceForBook(book_size);
+      return AddBook(move(book));
     }
   }
 
 private:
   shared_ptr<IBooksUnpacker> books_unpacker_;
   const Settings settings_;
-  unordered_map<string, BookPtr> cache_;
-  list<string> order_;
+  list<BookPtr> order_;
+  unordered_map<string, list<BookPtr>::iterator> cache_;
   size_t occupied_memory_ = 0;
   mutable mutex m;
 
-  void ReleaseSpaceForBook(size_t book_size) {
-    while (!cache_.empty() && settings_.max_memory - occupied_memory_ <= book_size) {
-      string cur_book = *order_.begin();
-      occupied_memory_ -= cache_[cur_book]->GetContent().size();
+  void ReleaseSpaceForBook(size_t demanded_size) {
+    while (settings_.max_memory - occupied_memory_ < demanded_size) {
+      occupied_memory_ -= order_.front()->GetContent().size();
+      cache_.erase(order_.front()->GetName());
       order_.pop_front();
-      cache_.erase(cur_book);
     }
   }
 
-  void UpdateBookOrder(const string& book_name) {
-    const auto it = find(order_.begin(), order_.end(), book_name);
-    if (it == order_.end())
-      throw runtime_error("Book name exists in cache but has no rank");
-    order_.push_back(*it);
-    order_.erase(it);
-  }
-
   BookPtr AddBook(unique_ptr<IBook> book) {
+    occupied_memory_ += book->GetContent().size();
     string book_name = book->GetName();
-    size_t book_size = book->GetContent().size();
-    order_.push_back(book_name);
-    cache_[book_name] = move(book);
-    occupied_memory_ += book_size;
-    return cache_[book_name];
+    cache_[move(book_name)] = order_.insert(order_.end(), move(book));
+    return order_.back();
   }
 };
 
