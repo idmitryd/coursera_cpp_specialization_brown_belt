@@ -9,27 +9,17 @@
 
 using namespace std;
 
-class ForbiddenDomains {
-public:
-  ForbiddenDomains(istream& in_stream) : forbidden_domains(ReadDomains(in_stream)) {
-  }
-private:
-  vector<vector<string>> forbidden_domains;
-
-  vector<vector<string>> ReadDomains(istream& in_stream);
-};
-
 vector<string> SplitBy(string_view sv, char by = '.') {
   if (sv.empty())
     return {};
   vector<string> res;
   size_t pos = 0;
   while (true) {
-    size_t dot_pos = sv.find(by, pos);
-    res.push_back(string(sv.substr(pos, dot_pos - pos)));
-    if (dot_pos == string_view::npos)
+    size_t by_pos = sv.find(by, pos);
+    res.push_back(string(sv.substr(pos, by_pos - pos)));
+    if (by_pos == string_view::npos)
       break;
-    pos = dot_pos + 1;
+    pos = by_pos + 1;
   }
   return res;
 }
@@ -44,7 +34,6 @@ vector<vector<string>> ReadDomains(istream& in_stream = cin) {
     domains[i] = SplitBy(domain);
     reverse(domains[i].begin(), domains[i].end());
   }
-  // reverse(domains.begin(), domains.end());
   return domains;
 }
 
@@ -61,33 +50,19 @@ bool IsPrefix(const vector<string>& lhs, const vector<string>& rhs) {
   return false;
 }
 
-bool IsDomainForbidden(const vector<string>& domain, const vector<vector<string>>& forbidden_domains) {
-  auto it = upper_bound(forbidden_domains.begin(), forbidden_domains.end(), domain);
-  while (it != forbidden_domains.begin() && (*prev(it))[0] == domain[0]) {
-    it = prev(it);
-    if (IsPrefix(domain, *it))
-      return true;
+bool IsDomainForbidden(const vector<string>& domain,
+                       const set<vector<string>>& forbidden_domains) {
+  // auto it = upper_bound(forbidden_domains.begin(), forbidden_domains.end(), domain);
+  for (auto it = forbidden_domains.upper_bound(domain);
+       it != forbidden_domains.begin() && domain[0] == (*prev(it))[0];
+       it = prev(it)) {
+    if (IsPrefix(domain, *prev(it))) return true;
   }
   return false;
-  // if (auto it = upper_bound(forbidden_domains.begin(), forbidden_domains.end(), domain);
-  //     it != forbidden_domains.begin() && !IsPrefix(domain, *prev(it))) {
-  //   cout << domain << endl;
-  //   cout << *prev(it) << endl;
-  //   cout << IsPrefix(domain, *prev(it)) << endl;
-  //   return true;
-  // }
-  // return false;
-  // for (const auto& forbidden : forbidden_domains) {
-  //   if (forbidden.size() > domain.size())
-  //     return false;
-  //   if (IsPrefix(domain, forbidden))
-  //     return true;
-  // }
-  // return false;
 }
 
-void CheckDomains(const vector<vector<string>>& forbidden_domains,
-                  const vector<vector<string>>& domains,
+void CheckDomains(const vector<vector<string>>& domains,
+                  const set<vector<string>>& forbidden_domains,
                   ostream& out = cout) {
   for (const auto& domain : domains) {
     bool isBad = IsDomainForbidden(domain, forbidden_domains);
@@ -144,35 +119,26 @@ void TestIsPrefix() {
   ASSERT_EQUAL(IsPrefix({"big", "words", "ya", "ru"}, {"ru", "ya"}), false);
   ASSERT_EQUAL(IsPrefix({"big", "words", "ya", "ru"}, {"words", "ya"}), false);
   ASSERT_EQUAL(IsPrefix({"big", "words", "ya", "ru"}, {"big", "words", "ya"}), true);
-  // ASSERT_EQUAL(IsPrefix({"big", "words", "ya", "ru"}, {"ya", "ru"}), true);
-  // ASSERT_EQUAL(IsPrefix({"big", "words", "ya", "ru"}, {"ru"}), true);
-  // ASSERT_EQUAL(IsPrefix({"big", "words", "ya", "ru"}, {"ig"}), false);
-  // ASSERT_EQUAL(IsPrefix({"defabc", "ru"}, {"abc"}), false);
-  // ASSERT_EQUAL(IsPrefix({"defabc", "ru"}, {"abc", "ru"}), false);
-  // ASSERT_EQUAL(IsPrefix({"b", "com"}, {"a", "b", "com"}), false);
-
-  // ASSERT_EQUAL(IsPrefix({"d", "b", "c"}, {"a", "b", "c"}), false);
-  // ASSERT_EQUAL(IsPrefix({"d", "b", "c"}, {"b", "c"}), true);
-
-  // ASSERT_EQUAL(IsPrefix({"ru", "com"}, {"ru"}), false);
 }
 
 void TestCheckDomains() {
-  vector<vector<string>> forbidden_domains = {
-    {"b", "c"},
-    {"a", "b", "c"},
-    // {},
-  };
-  for (auto& d : forbidden_domains)
-    reverse(d.begin(), d.end());
-  sort(forbidden_domains.begin(), forbidden_domains.end());
+  set<vector<string>> sorted_forbidden_domains = []() {
+    vector<vector<string>> unsorted_forbidden_domains = {
+        {"b", "c"},
+        {"a", "b", "c"},
+    };
+    for (auto& d : unsorted_forbidden_domains)
+      reverse(d.begin(), d.end());
+    return set<vector<string>>(make_move_iterator(unsorted_forbidden_domains.begin()),
+                               make_move_iterator(unsorted_forbidden_domains.end()));
+  }();
   vector<vector<string>> domains = {
     {"d", "b", "c"}
   };
   for (auto& d : domains)
     reverse(d.begin(), d.end());
   ostringstream out;
-  CheckDomains(forbidden_domains, domains, out);
+  CheckDomains(domains, sorted_forbidden_domains, out);
   ASSERT_EQUAL(out.str(), "Bad\n");
 }
 
@@ -187,7 +153,7 @@ void RunTests() {
 }
 
 int main() {
-  // RunTests();
+  RunTests();
   // istringstream input(
   //     "4\n"
   //     "ya.ru\n"
@@ -206,13 +172,12 @@ int main() {
   //     "ya.ya\n"
   //     );
   istream& input = cin;
-  const vector<vector<string>> forbidden_domains = [&](){
-    auto forbidden_domains = ReadDomains(input);
-    set<vector<string>> s(forbidden_domains.begin(), forbidden_domains.end());
-    // sort(forbidden_domains.begin(), forbidden_domains.end());
-    return vector<vector<string>>(s.begin(), s.end());
+  const set<vector<string>> forbidden_domains = [&](){
+    vector<vector<string>> unsorted_forbidden_domains = ReadDomains(input);
+    return set<vector<string>>(make_move_iterator(unsorted_forbidden_domains.begin()),
+                               make_move_iterator(unsorted_forbidden_domains.end()));
   }();
   vector<vector<string>> domains_to_test = ReadDomains(input);
-  CheckDomains(forbidden_domains, domains_to_test);
+  CheckDomains(domains_to_test, forbidden_domains);
   return 0;
 }
