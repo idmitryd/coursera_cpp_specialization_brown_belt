@@ -1,0 +1,8 @@
+BasedOnStyle: Google
+ReflowComments: false
+ColumnLimit: 100
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+IndentWidth: 4
+AccessModifierOffset: -4
